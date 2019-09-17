@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
-    XWindow window(QSize(480, 585), QSize(480, 585), QSize(480, 585));
+    XWindow window(QSize(490, 300), QSize(490, 300), QSize(490, 300));
     Proxy::getInstance()->init(&window);
     window.setFlag(Qt::Window, true);
     window.setFlag(Qt::WindowTitleHint, true);
@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
     window.setFlag(Qt::WindowCloseButtonHint, true);
     window.setContextProperty("proxy", Proxy::getInstance());
     window.setSource(QUrl(QStringLiteral("qrc:/main.qml")));
+    window.setTitle("图片帧播放器_v1.0.0_何展然");
     window.show();
     return app.exec();
 }
