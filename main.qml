@@ -27,11 +27,6 @@ Rectangle {
         anchors.topMargin: 5;
         width: {
             var w = image_frame.width;
-            if (w > g_max_width) {
-                g_max_width = w;
-            } else {
-                w = g_max_width;
-            }
             if (w < c_container_min_width) {
                 w = c_container_min_width;
             } else if (w > c_container_max_width) {
@@ -41,11 +36,6 @@ Rectangle {
         }
         height: {
             var h = image_frame.height;
-            if (h > g_max_height) {
-                g_max_height = h;
-            } else {
-                h = g_max_height;
-            }
             if (h < c_container_min_height) {
                 h = c_container_min_height;
             } else if (h > c_container_max_height) {
@@ -79,12 +69,14 @@ Rectangle {
                 running: true;
                 onTriggered: {
                     if (playing && frameList.length > 1) {
-                        image_frame.change();
-                        ++slider_progress.value;
                         if (slider_progress.value >= frameList.length - 1) {
-                            if (loop) {
-                                slider_progress.value = 0;
-                            } else {
+                            slider_progress.value = 0;
+                        } else {
+                            ++slider_progress.value;
+                        }
+                        image_frame.change();
+                        if (slider_progress.value >= frameList.length - 1) {
+                            if (!loop) {
                                 playing = false;
                             }
                         }
@@ -489,7 +481,13 @@ Rectangle {
 
     /* 更新窗口大小和标题 */
     function updateSize() {
-        proxy.setWindowWidth(5 + container_frame.width + 5);
-        proxy.setWindowHeight(5 + container_frame.height + 10 + slider_progress.height + 10 + text_frame_name.height + 5 + text_progress.height + 5);
+        if (container_frame.width > g_max_width) {
+            g_max_width = container_frame.width;
+        }
+        if (container_frame.height > g_max_height) {
+            g_max_height = container_frame.height;
+        }
+        proxy.setWindowWidth(5 + g_max_width + 5);
+        proxy.setWindowHeight(5 + g_max_height + 10 + slider_progress.height + 10 + text_frame_name.height + 5 + text_progress.height + 5);
     }
 }
