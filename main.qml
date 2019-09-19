@@ -9,6 +9,8 @@ Rectangle {
     readonly property int c_container_max_width: 1000;
     readonly property int c_container_max_height: 500;
 
+    property int g_max_width: 0;
+    property int g_max_height: 0;
     property var frameList: [];
     property int frameInterval: 17;
     property bool loop: true;
@@ -25,6 +27,11 @@ Rectangle {
         anchors.topMargin: 5;
         width: {
             var w = image_frame.width;
+            if (w > g_max_width) {
+                g_max_width = w;
+            } else {
+                w = g_max_width;
+            }
             if (w < c_container_min_width) {
                 w = c_container_min_width;
             } else if (w > c_container_max_width) {
@@ -34,6 +41,11 @@ Rectangle {
         }
         height: {
             var h = image_frame.height;
+            if (h > g_max_height) {
+                g_max_height = h;
+            } else {
+                h = g_max_height;
+            }
             if (h < c_container_min_height) {
                 h = c_container_min_height;
             } else if (h > c_container_max_height) {
@@ -66,7 +78,7 @@ Rectangle {
                 repeat: true;
                 running: true;
                 onTriggered: {
-                    if (playing && frameList.length > 0) {
+                    if (playing && frameList.length > 1) {
                         image_frame.change();
                         ++slider_progress.value;
                         if (slider_progress.value >= frameList.length - 1) {
@@ -101,12 +113,27 @@ Rectangle {
         }
     }
 
+    /* 当前帧名 */
+    Text {
+        id: text_frame_name;
+        anchors.horizontalCenter: parent.horizontalCenter;
+        anchors.top: slider_progress.bottom;
+        anchors.topMargin: 10;
+        verticalAlignment: Text.AlignVCenter;
+        wrapMode: Text.Wrap;
+        clip: true;
+        width: container_frame.width;
+        height: 0 === frameList.length ? 0 : (1 === lineCount ? 25 : (lineCount * 18));
+        text: 0 === frameList.length ? "" : frameList[slider_progress.value];
+        font.pixelSize: 16;
+    }
+
     /* 当前帧/总帧数 */
     Text {
         id: text_progress;
         anchors.horizontalCenter: parent.horizontalCenter;
-        anchors.top: slider_progress.bottom;
-        anchors.topMargin: 10;
+        anchors.top: text_frame_name.bottom;
+        anchors.topMargin: 5;
         horizontalAlignment: Text.AlignHCenter;
         verticalAlignment: Text.AlignVCenter;
         clip: true;
@@ -119,14 +146,14 @@ Rectangle {
     /* 播放/暂停按钮 */
     Button {
         id: btn_play_pause;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: btn_stop.left;
         anchors.rightMargin: btn_open.anchors.rightMargin;
         width: 35;
         height: text_progress.height;
         onClicked: {
-            if (0 === frameList.length) {
+            if (frameList.length <= 1) {
                 return;
             }
             playing = !playing;
@@ -147,7 +174,7 @@ Rectangle {
     /* 停止按钮 */
     Button {
         id: btn_stop;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: btn_back.left;
         anchors.rightMargin: btn_open.anchors.rightMargin;
@@ -166,7 +193,7 @@ Rectangle {
     /* 后退按钮 */
     Button {
         id: btn_back;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: btn_forward.left;
         anchors.rightMargin: btn_open.anchors.rightMargin;
@@ -174,7 +201,7 @@ Rectangle {
         height: text_progress.height;
         text: "❙◄";
         onClicked: {
-            if (slider_progress.value > 0) {
+            if (frameList.length > 1 && slider_progress.value > 0) {
                 --slider_progress.value;
                 image_frame.change();
             }
@@ -187,7 +214,7 @@ Rectangle {
     /* 前进按钮 */
     Button {
         id: btn_forward;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: btn_open.left;
         anchors.rightMargin: btn_open.anchors.rightMargin;
@@ -195,7 +222,7 @@ Rectangle {
         height: text_progress.height;
         text: "►❙";
         onClicked: {
-            if (frameList.length > 0 && slider_progress.value < frameList.length - 1) {
+            if (frameList.length > 1 && slider_progress.value < frameList.length - 1) {
                 ++slider_progress.value;
                 image_frame.change();
             }
@@ -208,7 +235,7 @@ Rectangle {
     /* 打开按钮 */
     Button {
         id: btn_open;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: text_progress.left;
         anchors.rightMargin: 5;
@@ -226,7 +253,7 @@ Rectangle {
     /* 帧间隔标题 */
     Text {
         id: text_interval;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: text_progress.right;
         anchors.leftMargin: btn_open.anchors.rightMargin;
@@ -240,7 +267,7 @@ Rectangle {
     /* 帧间隔 */
     MouseArea {
         id: area_interval;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: text_interval.right;
         anchors.leftMargin: btn_open.anchors.rightMargin;
@@ -299,7 +326,7 @@ Rectangle {
     /* 循环按钮 */
     Button {
         id: btn_loop;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: area_interval.right;
         anchors.leftMargin: btn_open.anchors.rightMargin;
@@ -317,7 +344,7 @@ Rectangle {
     /* 更多按钮 */
     Button {
         id: btn_more;
-        anchors.top: slider_progress.bottom;
+        anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: btn_loop.right;
         anchors.leftMargin: btn_open.anchors.rightMargin;
@@ -326,6 +353,7 @@ Rectangle {
         text: "更多";
         font.pixelSize: 16;
         onClicked: {
+            popup_msg_dialog.open("该功能未开放");
         }
         ToolTip.visible: hovered;
         ToolTip.text: "点击打开更多设置界面";
@@ -351,6 +379,99 @@ Rectangle {
         }
     }
 
+    /* 消息对话框框 */
+    Popup {
+        id: popup_msg_dialog;
+        width: parent.width / 2;
+        height: parent.height / 3;
+        anchors.centerIn: parent;
+        modal: true;
+        closePolicy: Popup.NoAutoClose;
+        property var okCallback: null;
+        background: Rectangle {
+            anchors.fill: parent;
+            color: "white"
+            radius: 5;
+
+            Text {
+                anchors.top: parent.top;
+                anchors.topMargin: 10;
+                anchors.horizontalCenter: parent.horizontalCenter;
+                text: "提示";
+            }
+
+            Rectangle {
+                anchors.left: parent.left;
+                anchors.leftMargin: 10;
+                anchors.right: parent.right;
+                anchors.rightMargin: 10;
+                anchors.top: parent.top;
+                anchors.topMargin: 35;
+                height: 1;
+                color: "#BBBBBB";
+            }
+
+            Text {
+                id: text_msg_dialog_content;
+                anchors.left: parent.left;
+                anchors.leftMargin: 30;
+                anchors.right: parent.right;
+                anchors.rightMargin: 30;
+                anchors.top: parent.top;
+                anchors.topMargin: 55;
+                anchors.bottom: parent.bottom;
+                anchors.bottomMargin: 45;
+                horizontalAlignment: Text.AlignHCenter;
+                verticalAlignment: Text.AlignVCenter;
+            }
+
+            Button {
+                width: 50;
+                height: 25;
+                x: {
+                    if ('function' === typeof(popup_msg_dialog.okCallback)) {
+                        return (parent.width / 2 - width) / 2;
+                    }
+                    return (parent.width - width) / 2;
+                }
+                anchors.bottom: parent.bottom;
+                anchors.bottomMargin: 10;
+                text: "确认";
+                onClicked: {
+                    popup_msg_dialog.close();
+                    var tmpOkCB = popup_msg_dialog.okCallback;
+                    popup_msg_dialog.okCallback = null;
+                    if ('function' === typeof(tmpOkCB)) {
+                        tmpOkCB();
+                    }
+                }
+            }
+
+            Button {
+                width: 50;
+                height: 25;
+                x: parent.width / 2 + (parent.width / 2 - width) / 2;
+                anchors.bottom: parent.bottom;
+                anchors.bottomMargin: 10;
+                text: "取消";
+                visible: 'function' === typeof(popup_msg_dialog.okCallback);
+                onClicked: {
+                    popup_msg_dialog.close();
+                    popup_msg_dialog.okCallback = null;
+                }
+            }
+        }
+        function open(content, okCB) {
+            if (visible) {
+                return;
+            }
+            visible = true;
+            var contentType = typeof(content);
+            text_msg_dialog_content.text = 'string' === contentType || 'number' === contentType ? content : "Unsupport content type '" + contentType + "'";
+            okCallback = okCB;
+        }
+    }
+
     /* 定时器 */
     Timer {
         interval: 100;
@@ -368,7 +489,7 @@ Rectangle {
 
     /* 更新窗口大小和标题 */
     function updateSize() {
-        proxy.setWindowWidth(container_frame.width + 10);
-        proxy.setWindowHeight(container_frame.height + 10 + 70);
+        proxy.setWindowWidth(5 + container_frame.width + 5);
+        proxy.setWindowHeight(5 + container_frame.height + 10 + slider_progress.height + 10 + text_frame_name.height + 5 + text_progress.height + 5);
     }
 }
