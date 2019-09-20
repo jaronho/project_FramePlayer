@@ -12,7 +12,7 @@ Rectangle {
     property int g_max_width: 0;
     property int g_max_height: 0;
     property var frameList: [];
-    property int frameInterval: 17;
+    property int frameInterval: 40;
     property bool loop: true;
     property bool playing: false;
 
@@ -263,7 +263,7 @@ Rectangle {
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: text_interval.right;
         anchors.leftMargin: btn_open.anchors.rightMargin;
-        width: 35;
+        width: 40;
         height: text_progress.height;
         hoverEnabled: true;
         onEntered: {
@@ -315,22 +315,25 @@ Rectangle {
         }
     }
 
-    /* 循环按钮 */
+    /* 清除按钮 */
     Button {
-        id: btn_loop;
+        id: btn_clear;
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: area_interval.right;
         anchors.leftMargin: btn_open.anchors.rightMargin;
-        width: 65;
+        width: 50;
         height: text_progress.height;
-        text: loop ? "●循环" : "○循环";
+        text: "清除";
         font.pixelSize: 16;
         onClicked: {
-            loop = !loop;
+            frameList = [];
+            playing = false;
+            slider_progress.value = 0;
+            image_frame.change();
         }
         ToolTip.visible: hovered;
-        ToolTip.text: "点击" + (loop ? "关闭" : "开启") + "循环播放";
+        ToolTip.text: "点击清除序列帧";
     }
 
     /* 更多按钮 */
@@ -338,14 +341,14 @@ Rectangle {
         id: btn_more;
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
-        anchors.left: btn_loop.right;
+        anchors.left: btn_clear.right;
         anchors.leftMargin: btn_open.anchors.rightMargin;
         width: 50;
         height: text_progress.height;
         text: "更多";
         font.pixelSize: 16;
         onClicked: {
-            popup_msg_dialog.open("该功能未开放");
+            popup_more_dialog.open();
         }
         ToolTip.visible: hovered;
         ToolTip.text: "点击打开更多设置界面";
@@ -371,11 +374,89 @@ Rectangle {
         }
     }
 
+    /* 更多对话框 */
+    Popup {
+        id: popup_more_dialog;
+        width: 280;
+        height: 150;
+        anchors.centerIn: parent;
+        modal: true;
+        closePolicy: Popup.NoAutoClose;
+        property var okCallback: null;
+        background: Rectangle {
+            anchors.fill: parent;
+            color: "white"
+            radius: 5;
+
+            Text {
+                anchors.top: parent.top;
+                anchors.topMargin: 10;
+                anchors.horizontalCenter: parent.horizontalCenter;
+                text: "更多设置";
+                font.pixelSize: 16;
+            }
+
+            Rectangle {
+                anchors.left: parent.left;
+                anchors.leftMargin: 10;
+                anchors.right: parent.right;
+                anchors.rightMargin: 10;
+                anchors.top: parent.top;
+                anchors.topMargin: 35;
+                height: 1;
+                color: "#BBBBBB";
+            }
+
+            /* 循环按钮 */
+            Button {
+                id: btn_loop;
+                anchors.top: parent.top;
+                anchors.topMargin: 50;
+                anchors.left: parent.left;
+                anchors.leftMargin: 25;
+                width: 65;
+                height: text_progress.height;
+                text: loop ? "●循环" : "○循环";
+                font.pixelSize: 16;
+                onClicked: {
+                    loop = !loop;
+                }
+                ToolTip.visible: hovered;
+                ToolTip.text: "点击" + (loop ? "关闭" : "开启") + "循环播放";
+            }
+
+            Button {
+                width: 50;
+                height: 25;
+                x: (parent.width - width) / 2;
+                anchors.bottom: parent.bottom;
+                anchors.bottomMargin: 10;
+                text: "确认";
+                font.pixelSize: 16;
+                onClicked: {
+                    popup_more_dialog.close();
+                    var tmpOkCB = popup_more_dialog.okCallback;
+                    popup_more_dialog.okCallback = null;
+                    if ('function' === typeof(tmpOkCB)) {
+                        tmpOkCB();
+                    }
+                }
+            }
+        }
+        function open(content, okCB) {
+            if (visible) {
+                return;
+            }
+            visible = true;
+            okCallback = okCB;
+        }
+    }
+
     /* 消息对话框框 */
     Popup {
         id: popup_msg_dialog;
-        width: parent.width / 2;
-        height: parent.height / 3;
+        width: 280;
+        height: 150;
         anchors.centerIn: parent;
         modal: true;
         closePolicy: Popup.NoAutoClose;
@@ -390,6 +471,7 @@ Rectangle {
                 anchors.topMargin: 10;
                 anchors.horizontalCenter: parent.horizontalCenter;
                 text: "提示";
+                font.pixelSize: 16;
             }
 
             Rectangle {
@@ -406,15 +488,18 @@ Rectangle {
             Text {
                 id: text_msg_dialog_content;
                 anchors.left: parent.left;
-                anchors.leftMargin: 30;
+                anchors.leftMargin: 25;
                 anchors.right: parent.right;
-                anchors.rightMargin: 30;
+                anchors.rightMargin: 25;
                 anchors.top: parent.top;
-                anchors.topMargin: 55;
+                anchors.topMargin: 50;
                 anchors.bottom: parent.bottom;
-                anchors.bottomMargin: 45;
+                anchors.bottomMargin: 55;
                 horizontalAlignment: Text.AlignHCenter;
                 verticalAlignment: Text.AlignVCenter;
+                clip: true;
+                wrapMode: Text.WrapAnywhere;
+                font.pixelSize: 16;
             }
 
             Button {
@@ -429,6 +514,7 @@ Rectangle {
                 anchors.bottom: parent.bottom;
                 anchors.bottomMargin: 10;
                 text: "确认";
+                font.pixelSize: 16;
                 onClicked: {
                     popup_msg_dialog.close();
                     var tmpOkCB = popup_msg_dialog.okCallback;
@@ -446,6 +532,7 @@ Rectangle {
                 anchors.bottom: parent.bottom;
                 anchors.bottomMargin: 10;
                 text: "取消";
+                font.pixelSize: 16;
                 visible: 'function' === typeof(popup_msg_dialog.okCallback);
                 onClicked: {
                     popup_msg_dialog.close();
