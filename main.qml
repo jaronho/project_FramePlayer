@@ -21,13 +21,81 @@ Rectangle {
     anchors.fill: parent;
     color: "#F5F5F5";
 
+    /* 将数组arrNew插入数组arrOri中,index是想要插入的位置 */
+    function insert(arrOri, index, arrNew) {
+        if (index < 0) {
+            index = 0;
+        } else if (index > arrOri.length) {
+            index = arrOri.length;
+        }
+        var arr = [];
+        for (var i = 0; i < index; ++i) {
+            arr.push(arrOri[i]);
+        }
+        for (var j = 0; j < arrNew.length; ++j) {
+            arr.push(arrNew[j]);
+        }
+        for (var k = index; k < arrOri.length; ++k) {
+            arr.push(arrOri[k]);
+        }
+        return arr;
+    }
+
+    function refresh() {
+        /* 刷新进度条 */
+        slider_progress.from = 0;
+        slider_progress.to = (0 === frameList.length) ? 0 : frameList.length - 1;
+        if (slider_progress.value > slider_progress.to) {
+            slider_progress.value = slider_progress.to;
+        }
+        /* 刷新图片帧 */
+        if (0 === frameList.length || slider_progress.value >= frameList.length) {
+            image_frame.source = "";
+        } else {
+            image_frame.source = frameList[slider_progress.value].url;
+            border_frame.updateOffset();
+        }
+        /* 刷新当前帧名 */
+        text_frame_name.height = (0 === frameList.length) ? 0 : (1 === text_frame_name.lineCount ? 25 : (text_frame_name.lineCount * 18));
+        text_frame_name.text = (0 === frameList.length) ? "" : frameList[slider_progress.value].url;
+        /* 刷新帧进度 */
+        text_progress.text = (0 === frameList.length ? 0 : slider_progress.value + 1) + "/" + frameList.length;
+    }
+
+    Keys.onPressed: {
+        switch (event.key) {
+        case Qt.Key_Space:
+            if (frameList.length > 1) {
+                playing = !playing;
+                if (playing && slider_progress.value >= frameList.length - 1) {
+                    slider_progress.value = 0;
+                }
+            }
+            break;
+        case Qt.Key_Left:
+            --slider_progress.value;
+            break;
+        case Qt.Key_Right:
+            ++slider_progress.value;
+            break;
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent;
+        onClicked: {
+            parent.focus = true;
+        }
+    }
+
     /* 图片帧 */
-    Item {
+    Rectangle {
         id: container_frame;
         anchors.horizontalCenter: parent.horizontalCenter;
         anchors.top: parent.top;
         anchors.topMargin: 5;
         clip: true;
+        color: border_frame.visible ? "transparent" : (whiteBackground ? "white" : "black");
         width: {
             var w = image_frame.width;
             if (w < c_container_min_width) {
@@ -87,15 +155,6 @@ Rectangle {
             Image {
                 id: image_frame;
                 anchors.centerIn: parent;
-
-                function change() {
-                    if (0 === frameList.length || slider_progress.value >= frameList.length) {
-                        source = "";
-                        return;
-                    }
-                    source = frameList[slider_progress.value].url;
-                    border_frame.updateOffset();
-                }
             }
 
             Timer {
@@ -109,7 +168,7 @@ Rectangle {
                         } else {
                             ++slider_progress.value;
                         }
-                        image_frame.change();
+                        refresh();
                         if (slider_progress.value >= frameList.length - 1) {
                             if (!loop) {
                                 playing = false;
@@ -162,12 +221,12 @@ Rectangle {
         height: 25;
         from: 0;
         to: 0 === frameList.length ? 0 : frameList.length - 1;
-        value: 1;
+        value: 0;
         stepSize: 1;
         ToolTip.visible: hovered;
         ToolTip.text: "拖动滑块改变播放进度, 当前第" + (0 === frameList.length ? 0 : value + 1) + "帧";
         onValueChanged: {
-            image_frame.change();
+            refresh();
         }
     }
 
@@ -207,7 +266,7 @@ Rectangle {
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: btn_stop.left;
-        anchors.rightMargin: btn_open.anchors.rightMargin;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
         width: 35;
         height: text_progress.height;
         onClicked: {
@@ -234,78 +293,122 @@ Rectangle {
         id: btn_stop;
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
-        anchors.right: btn_back.left;
-        anchors.rightMargin: btn_open.anchors.rightMargin;
+        anchors.right: btn_insert.left;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
         width: 35;
         height: text_progress.height;
         text: "█";
         onClicked: {
             playing = false;
             slider_progress.value = 0;
-            image_frame.change();
+            refresh();
         }
         ToolTip.visible: hovered;
         ToolTip.text: "点击停止播放";
     }
 
     /* 后退按钮 */
-    Button {
+    /*Button {
         id: btn_back;
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: btn_forward.left;
-        anchors.rightMargin: btn_open.anchors.rightMargin;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
         width: 40;
         height: text_progress.height;
         text: "❙◄";
         onClicked: {
             if (frameList.length > 1 && slider_progress.value > 0) {
                 --slider_progress.value;
-                image_frame.change();
+                refresh();
             }
         }
         enabled: !playing;
         ToolTip.visible: hovered;
         ToolTip.text: "点击后退一帧";
-    }
+    }*/
 
     /* 前进按钮 */
-    Button {
+    /*Button {
         id: btn_forward;
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
-        anchors.right: btn_open.left;
-        anchors.rightMargin: btn_open.anchors.rightMargin;
+        anchors.right: btn_append.left;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
         width: 40;
         height: text_progress.height;
         text: "►❙";
         onClicked: {
             if (frameList.length > 1 && slider_progress.value < frameList.length - 1) {
                 ++slider_progress.value;
-                image_frame.change();
+                refresh();
             }
         }
         enabled: !playing;
         ToolTip.visible: hovered;
         ToolTip.text: "点击前进一帧";
+    }*/
+
+    /* 插入按钮 */
+    Button {
+        id: btn_insert;
+        anchors.top: text_frame_name.bottom;
+        anchors.topMargin: text_progress.anchors.topMargin;
+        anchors.right: btn_append.left;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
+        width: 35;
+        height: text_progress.height;
+        text: "INS";
+        onClicked: {
+            filedialog_open.mode = 1;
+            filedialog_open.open();
+        }
+        enabled: !playing;
+        ToolTip.visible: hovered;
+        ToolTip.text: "点击在当前帧前面插入图片帧";
     }
 
-    /* 打开按钮 */
+    /* 添加按钮 */
     Button {
-        id: btn_open;
+        id: btn_append;
+        anchors.top: text_frame_name.bottom;
+        anchors.topMargin: text_progress.anchors.topMargin;
+        anchors.right: btn_delete.left;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
+        width: 35;
+        height: text_progress.height;
+        /*text: "✚";*/
+        text: "ADD";
+        onClicked: {
+            filedialog_open.mode = 2;
+            filedialog_open.open();
+        }
+        enabled: !playing;
+        ToolTip.visible: hovered;
+        ToolTip.text: "点击在当前帧后面添加图片帧";
+    }
+
+    /* 删除按钮 */
+    Button {
+        id: btn_delete;
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.right: text_progress.left;
         anchors.rightMargin: 5;
         width: 35;
         height: text_progress.height;
-        text: "✚";
+        text: "DEL";
         onClicked: {
-            filedialog_open.open();
+            if (frameList.length > 0) {
+                popup_msg_dialog.open("是否删除第" + (slider_progress.value + 1) + "帧?", function() {
+                    frameList.splice(slider_progress.value, 1);
+                    refresh();
+                })
+            }
         }
         enabled: !playing;
         ToolTip.visible: hovered;
-        ToolTip.text: "点击打开文件";
+        ToolTip.text: "点击删除当前帧";
     }
 
     /* 帧间隔标题 */
@@ -314,7 +417,7 @@ Rectangle {
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: text_progress.right;
-        anchors.leftMargin: btn_open.anchors.rightMargin;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
         horizontalAlignment: Text.AlignHCenter;
         verticalAlignment: Text.AlignVCenter;
         height: text_progress.height;
@@ -328,7 +431,7 @@ Rectangle {
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: text_interval.right;
-        anchors.leftMargin: btn_open.anchors.rightMargin;
+        anchors.rightMargin: btn_delete.anchors.rightMargin;
         width: 40;
         height: text_progress.height;
         hoverEnabled: true;
@@ -387,16 +490,20 @@ Rectangle {
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: area_interval.right;
-        anchors.leftMargin: btn_open.anchors.rightMargin;
+        anchors.leftMargin: btn_delete.anchors.rightMargin;
         width: 50;
         height: text_progress.height;
         text: "清除";
         font.pixelSize: 16;
         onClicked: {
-            frameList = [];
-            playing = false;
-            slider_progress.value = 0;
-            image_frame.change();
+            if (frameList.length > 0) {
+                popup_msg_dialog.open("是否清空所有序列帧?", function() {
+                    frameList = [];
+                    playing = false;
+                    slider_progress.value = 0;
+                    refresh();
+                })
+            }
         }
         ToolTip.visible: hovered;
         ToolTip.text: "点击清除序列帧";
@@ -408,7 +515,7 @@ Rectangle {
         anchors.top: text_frame_name.bottom;
         anchors.topMargin: text_progress.anchors.topMargin;
         anchors.left: btn_clear.right;
-        anchors.leftMargin: btn_open.anchors.rightMargin;
+        anchors.leftMargin: btn_delete.anchors.rightMargin;
         width: 50;
         height: text_progress.height;
         text: "更多";
@@ -433,11 +540,18 @@ Rectangle {
             for (var i = 0; i < fileUrls.length; ++i) {
                 tmpList.push({"url":fileUrls[i], "x":0, "y":0});
             }
-            frameList = tmpList;
-            playing = false;
-            slider_progress.value = 0;
-            image_frame.change();
+            if (0 === frameList.length) {
+                frameList = tmpList;
+            } else {
+                if (1 === mode) {
+                    frameList = insert(frameList, slider_progress.value, tmpList);
+                } else {    /* 2 === mode */
+                    frameList = insert(frameList, slider_progress.value + 1, tmpList);
+                }
+            }
+            refresh();
         }
+        property int mode: 1;
     }
 
     /* 更多对话框 */
