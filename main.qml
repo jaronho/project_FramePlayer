@@ -194,7 +194,7 @@ Rectangle {
             }
             onClicked: {
                 if (Qt.RightButton === mouse.button) {
-                    if (!playing) {
+                    if (frameList.length > 0 && !playing) {
                         popup_offset_dialog.open(border_frame.xOffset(), border_frame.yOffset(), function(x, y) {
                             border_frame.setOffset(x, y);
                             border_frame.updateOffset();
