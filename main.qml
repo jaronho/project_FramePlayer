@@ -15,6 +15,8 @@ Rectangle {
     property int frameInterval: 40;
     property bool loop: true;
     property bool playing: false;
+    property bool showBorder: true;
+    property bool whiteBackground: true;
 
     anchors.fill: parent;
     color: "#F5F5F5";
@@ -25,6 +27,7 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter;
         anchors.top: parent.top;
         anchors.topMargin: 5;
+        clip: true;
         width: {
             var w = image_frame.width;
             if (w < c_container_min_width) {
@@ -32,7 +35,7 @@ Rectangle {
             } else if (w > c_container_max_width) {
                 w = c_container_max_width;
             }
-            return w + 1;
+            return w + 2;
         }
         height: {
             var h = image_frame.height;
@@ -41,14 +44,45 @@ Rectangle {
             } else if (h > c_container_max_height) {
                 h = c_container_max_height;
             }
-            return h + 1;
+            return h + 2;
         }
 
         Rectangle {
-            anchors.centerIn: parent;
-            width: image_frame.width + 1;
-            height: image_frame.height + 1;
-            border.color: "grey";
+            id: border_frame;
+            width: image_frame.width + 2;
+            height: image_frame.height + 2;
+            x: (parent.width - width) / 2 + xOffset();
+            y: (parent.height - height) / 2 + yOffset();
+            border.color: showBorder ? "grey" : "transparent";
+            color: whiteBackground ? "white" : "black";
+            visible: frameList.length > 0;
+
+            function xOffset() {
+                if (0 === frameList.length || slider_progress.value >= frameList.length) {
+                    return 0;
+                }
+                return frameList[slider_progress.value].x;
+            }
+
+            function yOffset() {
+                if (0 === frameList.length || slider_progress.value >= frameList.length) {
+                    return 0;
+                }
+                return frameList[slider_progress.value].y;
+            }
+
+            function setOffset(x, y) {
+                if (0 === frameList.length || slider_progress.value >= frameList.length) {
+                    return;
+                }
+                frameList[slider_progress.value].x = x;
+                frameList[slider_progress.value].y = y;
+            }
+
+            function updateOffset() {
+                x = (parent.width - width) / 2 + xOffset();
+                y = (parent.height - height) / 2 + yOffset();
+            }
 
             Image {
                 id: image_frame;
@@ -59,7 +93,8 @@ Rectangle {
                         source = "";
                         return;
                     }
-                    source = frameList[slider_progress.value];
+                    source = frameList[slider_progress.value].url;
+                    border_frame.updateOffset();
                 }
             }
 
@@ -84,8 +119,39 @@ Rectangle {
                 }
             }
         }
+
+        MouseArea {
+            anchors.fill: parent;
+            hoverEnabled: true;
+            acceptedButtons: Qt.RightButton;
+            onEntered: {
+                if (frameList.length > 0 && !playing) {
+                    ToolTip.text = "右击可编辑图片帧偏移位置, 当前偏移(" + border_frame.xOffset() + ", " + border_frame.yOffset() + ")";
+                    ToolTip.visible = true;
+                }
+            }
+            onExited: {
+                ToolTip.visible = false;
+            }
+            onClicked: {
+                if (Qt.RightButton === mouse.button) {
+                    if (!playing) {
+                        popup_offset_dialog.open(border_frame.xOffset(), border_frame.yOffset(), function(x, y) {
+                            border_frame.setOffset(x, y);
+                            border_frame.updateOffset();
+                        });
+                    }
+                }
+            }
+        }
     }
 
+    Rectangle {
+        anchors.fill: container_frame;
+        anchors.centerIn: container_frame;
+        color: "transparent";
+        border.color: showBorder ? "green" : "transparent";
+    }
     /* 进度条 */
     Slider {
         id: slider_progress;
@@ -116,7 +182,7 @@ Rectangle {
         clip: true;
         width: container_frame.width;
         height: 0 === frameList.length ? 0 : (1 === lineCount ? 25 : (lineCount * 18));
-        text: 0 === frameList.length ? "" : frameList[slider_progress.value];
+        text: 0 === frameList.length ? "" : frameList[slider_progress.value].url;
         font.pixelSize: 16;
     }
 
@@ -365,7 +431,7 @@ Rectangle {
         onAccepted: {
             var tmpList = [];
             for (var i = 0; i < fileUrls.length; ++i) {
-                tmpList.push(fileUrls[i]);
+                tmpList.push({"url":fileUrls[i], "x":0, "y":0});
             }
             frameList = tmpList;
             playing = false;
@@ -411,11 +477,11 @@ Rectangle {
             Button {
                 id: btn_loop;
                 anchors.top: parent.top;
-                anchors.topMargin: 50;
-                anchors.left: parent.left;
-                anchors.leftMargin: 25;
+                anchors.topMargin: btn_border.anchors.topMargin;
+                anchors.right: btn_border.left;
+                anchors.rightMargin: 20;
                 width: 65;
-                height: text_progress.height;
+                height: 25;
                 text: loop ? "●循环" : "○循环";
                 font.pixelSize: 16;
                 onClicked: {
@@ -423,6 +489,41 @@ Rectangle {
                 }
                 ToolTip.visible: hovered;
                 ToolTip.text: "点击" + (loop ? "关闭" : "开启") + "循环播放";
+            }
+
+            /* 显示边框按钮 */
+            Button {
+                id: btn_border;
+                anchors.top: parent.top;
+                anchors.topMargin: 50;
+                anchors.horizontalCenter: parent.horizontalCenter;
+                width: 65;
+                height: 25;
+                text: showBorder ? "●边框" : "○边框";
+                font.pixelSize: 16;
+                onClicked: {
+                    showBorder = !showBorder;
+                }
+                ToolTip.visible: hovered;
+                ToolTip.text: "点击" + (showBorder ? "隐藏" : "显示") + "边框";
+            }
+
+            /* 背景颜色按钮 */
+            Button {
+                id: btn_background;
+                anchors.top: parent.top;
+                anchors.topMargin: 50;
+                anchors.left: btn_border.right;
+                anchors.leftMargin: btn_loop.anchors.rightMargin;
+                width: 65;
+                height: 25;
+                text: whiteBackground ? "○白色" : "●黑色";
+                font.pixelSize: 16;
+                onClicked: {
+                    whiteBackground = !whiteBackground;
+                }
+                ToolTip.visible: hovered;
+                ToolTip.text: "点击设置为" + (whiteBackground ? "黑色" : "白色") + "背景";
             }
 
             Button {
@@ -443,7 +544,7 @@ Rectangle {
                 }
             }
         }
-        function open(content, okCB) {
+        function open(okCB) {
             if (visible) {
                 return;
             }
@@ -452,7 +553,191 @@ Rectangle {
         }
     }
 
-    /* 消息对话框框 */
+    /* 帧偏移位置编辑框 */
+    Popup {
+        id: popup_offset_dialog;
+        width: 280;
+        height: 150;
+        anchors.centerIn: parent;
+        modal: true;
+        closePolicy: Popup.NoAutoClose;
+        property var okCallback: null;
+        background: Rectangle {
+            anchors.fill: parent;
+            color: "white"
+            radius: 5;
+
+            Text {
+                anchors.top: parent.top;
+                anchors.topMargin: 10;
+                anchors.horizontalCenter: parent.horizontalCenter;
+                text: "帧偏移位置";
+                font.pixelSize: 16;
+            }
+
+            Rectangle {
+                anchors.left: parent.left;
+                anchors.leftMargin: 10;
+                anchors.right: parent.right;
+                anchors.rightMargin: 10;
+                anchors.top: parent.top;
+                anchors.topMargin: 35;
+                height: 1;
+                color: "#BBBBBB";
+            }
+
+            Text {
+                id: text_offset_x;
+                anchors.top: parent.top;
+                anchors.topMargin: 60;
+                anchors.right: area_offset_x.left;
+                anchors.rightMargin: 2;
+                verticalAlignment: Text.AlignVCenter;
+                height: 25;
+                text: "x:";
+                font.pixelSize: 16;
+            }
+
+            MouseArea {
+                id: area_offset_x;
+                anchors.top: parent.top;
+                anchors.topMargin: text_offset_x.anchors.topMargin;
+                anchors.right: text_offset_y.left;
+                anchors.rightMargin: 50;
+                width: 40;
+                height: 25;
+
+                Rectangle {
+                    width: parent.width;
+                    height: parent.height * 0.85;
+                    anchors.verticalCenter: parent.verticalCenter;
+                    color: "#DDDDDD";
+                }
+
+                TextInput {
+                    id: textinput_offset_x;
+                    anchors.top: parent.top;
+                    anchors.bottom: parent.bottom;
+                    anchors.left: parent.left;
+                    anchors.leftMargin: 2;
+                    anchors.right: parent.right;
+                    anchors.rightMargin: 2;
+                    horizontalAlignment: Text.AlignLeft;
+                    verticalAlignment: Text.AlignVCenter;
+                    clip: true;
+                    selectByMouse: true;
+                    validator: RegExpValidator {
+                        regExp: /^(\-?)[0-9]{0,4}$/;
+                    }
+                    text: "0";
+                    onEditingFinished: {
+                        var iNum = 0;
+                        if (text.length > 0) {
+                            iNum = parseInt(text);
+                            if (isNaN(iNum) || 0 === iNum) {
+                                iNum = 0;
+                            }
+                        }
+                        text = iNum;
+                    }
+                    onAccepted: {
+                        focus = false;
+                    }
+                    font.pixelSize: 16;
+                }
+            }
+
+            Text {
+                id: text_offset_y;
+                anchors.top: parent.top;
+                anchors.topMargin: text_offset_x.anchors.topMargin;
+                anchors.left: parent.left;
+                anchors.leftMargin: parent.width / 2 + 20;
+                verticalAlignment: Text.AlignVCenter;
+                height: 25;
+                text: "y:";
+                font.pixelSize: 16;
+            }
+
+            MouseArea {
+                id: area_offset_y;
+                anchors.top: parent.top;
+                anchors.topMargin: text_offset_x.anchors.topMargin;
+                anchors.left: text_offset_y.right;
+                anchors.leftMargin: 2;
+                width: 40;
+                height: 25;
+
+                Rectangle {
+                    width: parent.width;
+                    height: parent.height * 0.85;
+                    anchors.verticalCenter: parent.verticalCenter;
+                    color: "#DDDDDD";
+                }
+
+                TextInput {
+                    id: textinput_offset_y;
+                    anchors.top: parent.top;
+                    anchors.bottom: parent.bottom;
+                    anchors.left: parent.left;
+                    anchors.leftMargin: 2;
+                    anchors.right: parent.right;
+                    anchors.rightMargin: 2;
+                    horizontalAlignment: Text.AlignLeft;
+                    verticalAlignment: Text.AlignVCenter;
+                    clip: true;
+                    selectByMouse: true;
+                    validator: RegExpValidator {
+                        regExp: /^(\-?)[0-9]{0,4}$/;
+                    }
+                    text: "0";
+                    onEditingFinished: {
+                        var iNum = 0;
+                        if (text.length > 0) {
+                            iNum = parseInt(text);
+                            if (isNaN(iNum) || 0 === iNum) {
+                                iNum = 0;
+                            }
+                        }
+                        text = iNum;
+                    }
+                    onAccepted: {
+                        focus = false;
+                    }
+                    font.pixelSize: 16;
+                }
+            }
+
+            Button {
+                width: 50;
+                height: 25;
+                x: (parent.width - width) / 2;
+                anchors.bottom: parent.bottom;
+                anchors.bottomMargin: 10;
+                text: "确认";
+                font.pixelSize: 16;
+                onClicked: {
+                    popup_offset_dialog.close();
+                    var tmpOkCB = popup_offset_dialog.okCallback;
+                    popup_offset_dialog.okCallback = null;
+                    if ('function' === typeof(tmpOkCB)) {
+                        tmpOkCB(parseInt(textinput_offset_x.text), parseInt(textinput_offset_y.text));
+                    }
+                }
+            }
+        }
+        function open(x, y, okCB) {
+            if (visible) {
+                return;
+            }
+            textinput_offset_x.text = ('number' === typeof(x) && x >= 0) ? x : 0;
+            textinput_offset_y.text = ('number' === typeof(y) && y >= 0) ? y : 0;
+            visible = true;
+            okCallback = okCB;
+        }
+    }
+
+    /* 消息对话框 */
     Popup {
         id: popup_msg_dialog;
         width: 280;
