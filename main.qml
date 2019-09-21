@@ -54,10 +54,11 @@ Rectangle {
         } else {
             image_frame.source = frameList[slider_progress.value].url;
             border_frame.updateOffset();
+            area_frame.updateToolTip();
         }
         /* 刷新当前帧名 */
-        text_frame_name.height = (0 === frameList.length) ? 0 : (1 === text_frame_name.lineCount ? 25 : (text_frame_name.lineCount * 18));
         text_frame_name.text = (0 === frameList.length) ? "" : frameList[slider_progress.value].url;
+        text_frame_name.height = (0 === frameList.length) ? 0 : (1 === text_frame_name.lineCount ? 25 : (text_frame_name.lineCount * 18));
         /* 刷新帧进度 */
         text_progress.text = (0 === frameList.length ? 0 : slider_progress.value + 1) + "/" + frameList.length;
     }
@@ -180,12 +181,13 @@ Rectangle {
         }
 
         MouseArea {
+            id: area_frame;
             anchors.fill: parent;
             hoverEnabled: true;
             acceptedButtons: Qt.RightButton;
             onEntered: {
                 if (frameList.length > 0 && !playing) {
-                    ToolTip.text = "右击可编辑图片帧偏移位置, 当前偏移(" + border_frame.xOffset() + ", " + border_frame.yOffset() + ")";
+                    updateToolTip();
                     ToolTip.visible = true;
                 }
             }
@@ -198,9 +200,14 @@ Rectangle {
                         popup_offset_dialog.open(border_frame.xOffset(), border_frame.yOffset(), function(x, y) {
                             border_frame.setOffset(x, y);
                             border_frame.updateOffset();
+                            area_frame.updateToolTip();
                         });
                     }
                 }
+            }
+
+            function updateToolTip() {
+                ToolTip.text = "右击可编辑图片帧偏移位置, 当前偏移(" + border_frame.xOffset() + ", " + border_frame.yOffset() + ")";
             }
         }
     }
@@ -844,8 +851,8 @@ Rectangle {
             if (visible) {
                 return;
             }
-            textinput_offset_x.text = ('number' === typeof(x) && x >= 0) ? x : 0;
-            textinput_offset_y.text = ('number' === typeof(y) && y >= 0) ? y : 0;
+            textinput_offset_x.text = ('number' === typeof(x)) ? x : 0;
+            textinput_offset_y.text = ('number' === typeof(y)) ? y : 0;
             visible = true;
             okCallback = okCB;
         }
